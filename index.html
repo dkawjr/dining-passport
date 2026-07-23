@@ -58,13 +58,18 @@
         <option value="cuisine">Cuisine</option>
       </select>
     </div>
-    <div class="pageind" id="pageind">1 / 1</div>
+    <div class="pagenav">
+      <button class="navbtn" id="deskPrev" aria-label="Previous page">‹</button>
+      <span class="pageind" id="pageind">1 / 1</span>
+      <button class="navbtn" id="deskNext" aria-label="Next page">›</button>
+    </div>
   </nav>
 
   <div id="detail" hidden></div>
   <div id="toast"></div>
 
   <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
   <script type="module" src="app.js"></script>
 </body>
 </html>

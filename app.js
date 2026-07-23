@@ -5,8 +5,8 @@
 // ============================================================================
 import { loadData, HOME } from "./data.js";
 import { createGlobe } from "./globe.js";
-import { createFlipbook } from "./flipbook.js";
-import { stampCell, inkedStamp, hashCode } from "./stamps.js";
+import { createBook } from "./flipbook.js";
+import { stampCell, inkedStamp, ghostStamp, hashCode } from "./stamps.js";
 import { Sync, mergeState } from "./sync.js";
 
 const $  = s => document.querySelector(s);
@@ -19,7 +19,7 @@ let picks = {};
 let visited = new Set();
 let globe = null;
 let book = null;
-let spreads = [];
+let PAGES = [];
 let chapterStart = {};
 
 /* ---------- state / persistence / share ---------- */
@@ -112,27 +112,39 @@ function idFace(){
     <div class="id-note">Turn the page to spin the globe →</div>
   </div>`;
 }
-function worldLeftFace(){
+function coverFace(){
+  return `<div class="pp-face cover"><div class="cover-frame">
+    <div class="cover-crest">🌐</div>
+    <div class="cover-top">United Tastes of</div>
+    <div class="cover-title">NEW YORK</div>
+    <div class="cover-sub">Dining Passport</div>
+    <div class="cover-rule"></div>
+    <div class="cover-names">Jasmine &amp; Adrian</div>
+    <div class="cover-foot">Restaurant Week · MMXXVI</div>
+  </div></div>`;
+}
+function backCoverFace(){
+  return `<div class="pp-face cover back-cover"><div class="cover-frame">
+    <div class="cover-crest">✦</div>
+    <div class="cover-title" style="font-size:26px">Bon appétit</div>
+    <div class="cover-sub">safe travels &amp; delicious returns</div>
+  </div></div>`;
+}
+function worldFace(){
   const cs=countries();
-  const picked=DATA.filter(d=>isPicked(d.name)).length;
   const matches=DATA.filter(d=>isMatch(d.name)).length;
   const rated=DATA.filter(d=>d.rating!=null); const avg=rated.length?(rated.reduce((s,d)=>s+d.rating,0)/rated.length):0;
-  return `<div class="pp-face world-left"><div class="wl-in">
-    <div class="wl-kick">Your world this Restaurant Week</div>
-    <div class="wl-title">Dine around<br>the globe</div>
-    <div class="wl-stats">
+  return `<div class="pp-face globe-page">
+    <canvas id="bookGlobe"></canvas>
+    <div class="gp-stats">
       <div><b>${DATA.length}</b><span>tables</span></div>
       <div><b>${cs.length}</b><span>countries</span></div>
       <div><b>${matches}</b><span>matches</span></div>
       <div><b>${[...visited].length}</b><span>stamped</span></div>
       <div><b>${avg?avg.toFixed(1):"—"}</b><span>avg ★</span></div>
-      <div><b>${picked}</b><span>picked</span></div>
     </div>
-    <div class="wl-note">Heart the places you each love — mutual picks become ★ Matches. Collect a stamp for every country you visit.</div>
-  </div></div>`;
-}
-function worldGlobeFace(){
-  return `<div class="pp-face globe-page"><canvas id="bookGlobe"></canvas><div class="gp-cap">drag to spin · tap a glowing pin</div></div>`;
+    <div class="gp-cap">drag to spin · tap a glowing pin</div>
+  </div>`;
 }
 function entryHTML(d){
   const p=pk(d.name);
@@ -187,31 +199,30 @@ function tripRow(d, star){
 
 /* ---------- build spreads ---------- */
 function chunk(a,n){ const o=[]; for(let i=0;i<a.length;i+=n) o.push(a.slice(i,i+n)); return o; }
-function buildSpreads(){
-  const S=[];
-  S.push({ chapter:"intro", left:endpaperFace, right:idFace });
-  S.push({ chapter:"world", left:worldLeftFace, right:worldGlobeFace });
+function buildPages(){
+  const P=[];
+  P.push({ chapter:"intro", hard:true, html:coverFace() });   // hard front cover
+  P.push({ chapter:"intro", html:idFace() });                 // inside: identity / MRZ
+  P.push({ chapter:"world", html:worldFace() });              // spread: id | globe
 
   const list=currentList();
-  let pages=chunk(list,3); if(!pages.length) pages=[[]]; if(pages.length%2) pages.push([]);
-  for(let i=0;i<pages.length;i+=2){
-    const l=pages[i], r=pages[i+1]||[], first=(i===0);
-    S.push({ chapter:"eat", left:()=>eatFace(l,first,list.length), right:()=>eatFace(r,false) });
-  }
+  let pages=chunk(list,3); if(!pages.length) pages=[[]];
+  pages.forEach((g,i)=>P.push({ chapter:"eat", html:eatFace(g, i===0, list.length) }));
+  if(pages.length % 2) P.push({ chapter:"eat", html:`<div class="pp-face eat-page"></div>` }); // keep spreads aligned
 
   const cs=countries().sort((a,b)=>(a.region+a.country).localeCompare(b.region+b.country));
-  let sp=chunk(cs,6); if(sp.length%2) sp.push([]);
-  for(let i=0;i<sp.length;i+=2){
-    const l=sp[i], r=sp[i+1]||[];
-    S.push({ chapter:"stamps", left:()=>stampFace(l), right:()=>stampFace(r) });
-  }
+  let sp=chunk(cs,6);
+  sp.forEach(g=>P.push({ chapter:"stamps", html:stampFace(g) }));
+  if(sp.length % 2) P.push({ chapter:"stamps", html:`<div class="pp-face stamp-page"></div>` });
 
-  S.push({ chapter:"trip", left:tripLeftFace, right:tripRightFace });
-  return S;
+  P.push({ chapter:"trip", html:tripLeftFace() });
+  P.push({ chapter:"trip", html:tripRightFace() });
+  P.push({ chapter:"intro", hard:true, html:backCoverFace() }); // hard back cover
+  return P;
 }
 function computeChapters(){
   chapterStart={};
-  spreads.forEach((s,i)=>{ if(!(s.chapter in chapterStart)) chapterStart[s.chapter]=i; });
+  PAGES.forEach((p,i)=>{ if(!(p.chapter in chapterStart)) chapterStart[p.chapter]=i; });
 }
 
 /* ---------- globe lifecycle ---------- */
@@ -221,14 +232,19 @@ function makeGlobe(cv){
   catch(e){ console.warn("globe failed",e); return null; }
 }
 
-/* ---------- flipbook wiring ---------- */
-function renderSpread(i){ const s=spreads[i]; return { left:s.left(), right:s.right(), chapter:s.chapter, mount:s.mount }; }
-function onChange(i, chapter){
+/* ---------- book wiring ---------- */
+function getPages(){ PAGES=buildPages(); computeChapters(); return PAGES; }
+function onBuild(){
+  // (re)create the globe once its canvas exists in the freshly built book
+  if(globe){ globe.destroy(); globe=null; }
+  const cv=$("#bookGlobe"); if(cv) globe=makeGlobe(cv);
+}
+function onFlip(idx){
+  let chapter=(PAGES[idx]||{}).chapter||"intro";
+  const nxt=(PAGES[idx+1]||{}).chapter;                 // spread spans two pages
+  if(chapter==="intro" && nxt && nxt!=="intro") chapter=nxt;
   $$(".chapter-btn").forEach(b=>b.classList.toggle("on", b.dataset.chapter===chapter));
-  const pi=$("#pageind"); if(pi) pi.textContent=`${i+1} / ${spreads.length}`;
-  $(".desk")?.classList.toggle("eat-active", chapter==="eat");
-  if(chapter==="world"){ const cv=$("#bookGlobe"); if(cv){ if(globe) globe.destroy(); globe=makeGlobe(cv); } }
-  else if(globe){ globe.destroy(); globe=null; }
+  const pi=$("#pageind"); if(pi) pi.textContent=`${(idx||0)+1} / ${PAGES.length}`;
 }
 
 /* ---------- modal ---------- */
@@ -248,7 +264,15 @@ function openCountry(country){
       <span class="tr-rate">${d.rating?('★ '+d.rating.toFixed(1)):'—'}</span></a>`).join("")}</div></div>`;
   document.body.style.overflow="hidden";
   $("#closeDetail").onclick=closeDetail; dlg.querySelector(".scrim").onclick=closeDetail;
-  $("#toggleVisit").onclick=()=>{ if(visited.has(country)) visited.delete(country); else visited.add(country); persist(); book.refresh(); closeDetail(); };
+  $("#toggleVisit").onclick=()=>{
+    const nowV=!visited.has(country); if(nowV) visited.add(country); else visited.delete(country); persist();
+    document.querySelectorAll(`.stamp-cell[data-country="${encodeURIComponent(country)}"]`).forEach(cell=>{
+      const flag=cell.getAttribute("data-flag"), seed=+cell.getAttribute("data-seed");
+      if(nowV){ cell.classList.remove("empty"); cell.classList.add("inked"); cell.innerHTML=inkedStamp(country, flag, seed); }
+      else { cell.classList.remove("inked"); cell.classList.add("empty"); cell.innerHTML=ghostStamp(country, flag); }
+    });
+    closeDetail();
+  };
 }
 function closeDetail(){ $("#detail").hidden=true; document.body.style.overflow=""; }
 
@@ -258,7 +282,10 @@ function wire(){
     const ht=e.target.closest("[data-heart]");
     if(ht){ const who=ht.getAttribute("data-heart"), nm=decodeURIComponent(ht.getAttribute("data-name"));
       const cur=pk(nm), next={...cur}; next[who]=!cur[who]; if(!next.j&&!next.a) delete picks[nm]; else picks[nm]=next;
-      persist(); book.refresh(); if(next.j&&next.a) toast(`✦ It's a <b>Match</b> — ${nm} is on your list`); return; }
+      persist();
+      const entryEl=ht.closest(".entry"); const d=DATA.find(x=>x.name===nm);
+      if(entryEl && d) entryEl.outerHTML=entryHTML(d);
+      if(next.j&&next.a) toast(`✦ It's a <b>Match</b> — ${nm} is on your list`); return; }
     const st=e.target.closest(".stamp-cell");
     if(st && !st.classList.contains("filler")){
       const country=decodeURIComponent(st.getAttribute("data-country")||"");
@@ -271,9 +298,13 @@ function wire(){
     const cb=e.target.closest(".chapter-btn");
     if(cb){ const c=cb.dataset.chapter; if(c in chapterStart) book.goTo(chapterStart[c]); return; }
   });
-  document.addEventListener("keydown", e=>{ if(e.key==="Escape") closeDetail(); });
+  document.addEventListener("keydown", e=>{ if(e.key==="Escape") closeDetail();
+    if(e.key==="ArrowRight") book.flipNext(); if(e.key==="ArrowLeft") book.flipPrev(); });
 
-  const rebuildEat=()=>{ spreads=buildSpreads(); computeChapters(); book.rebuild(spreads.length); book.goTo(chapterStart.eat); };
+  $("#deskNext")?.addEventListener("click", ()=>book.flipNext());
+  $("#deskPrev")?.addEventListener("click", ()=>book.flipPrev());
+
+  let rt; const rebuildEat=()=>{ clearTimeout(rt); rt=setTimeout(()=>{ book.rebuild(); if("eat" in chapterStart) book.goTo(chapterStart.eat); }, 180); };
   $("#q").addEventListener("input", rebuildEat);
   ["fCuisine","fBorough","fPrice","fWho","sort"].forEach(id=>$("#"+id).addEventListener("change", rebuildEat));
 
@@ -300,7 +331,7 @@ function onRemote(remote){
   const merged=mergeState({ picks, visited:[...visited] }, remote);
   picks=merged.picks; visited=new Set(merged.visited);
   try{ localStorage.setItem("rw_picks",JSON.stringify(picks)); localStorage.setItem("rw_visited",JSON.stringify([...visited])); }catch(e){}
-  syncHash(); if(book) book.refresh();
+  syncHash(); if(book) book.rebuild();
 }
 function onStatus(mode, room){ const b=$("#syncBadge"); if(!b) return; b.className="sync-badge"+(mode==="live"?" live":""); b.innerHTML=`<span class="dot"></span>${mode==="live"?"Live · "+room:"Share-link"}`; }
 
@@ -313,12 +344,11 @@ async function boot(){
   fill($("#fBorough"),uniq(DATA.map(d=>d.borough)),"All boroughs");
   fill($("#fPrice"),["$$","$$$","$$$$"],"Any price");
 
-  spreads=buildSpreads(); computeChapters();
-  book=createFlipbook($("#book"), { count:spreads.length, render:renderSpread, onChange });
+  book=createBook($("#book"), { getPages, onFlip, onBuild });
   wire(); syncHash();
 
   const ch=new URLSearchParams(location.search).get("chapter");
-  if(ch && ch in chapterStart) book.goTo(chapterStart[ch]);
+  if(ch && ch in chapterStart) setTimeout(()=>book.goTo(chapterStart[ch]), 60);
 
   await Sync.init({ onRemote, onStatus });
   if(Sync.mode==="live") Sync.push({ picks, visited:[...visited] });

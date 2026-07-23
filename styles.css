@@ -488,3 +488,30 @@ body.passport-app{ height:100svh; overflow:hidden; display:flex; flex-direction:
   .pp-face{ padding:14px 12px; } .wl-title{ font-size:24px; } .e-top h4{ font-size:14px; }
   .topbar .brand span:not(.seal){ display:none; }
 }
+
+/* ============================================================================
+   StPageFlip integration
+   ============================================================================ */
+#book{ width:100%; height:100%; }
+.stf__parent{ margin:0 auto; --pp-paper:#efe6cf; --pp-paper-2:#e7dcbf; --pp-ink:#4a3d27; --pp-ink-soft:#8a7a55; --pp-ghost:#b8a67e; }
+.page{ position:relative; overflow:hidden; background:var(--pp-paper);
+  --pp-paper:#efe6cf; --pp-paper-2:#e7dcbf; --pp-ink:#4a3d27; --pp-ink-soft:#8a7a55; --pp-ghost:#b8a67e; }
+.page .pp-face{ position:absolute; inset:0; }
+.page.--left{ box-shadow:inset -18px 0 30px -20px rgba(40,28,8,.55); }
+.page.--right{ box-shadow:inset 18px 0 30px -20px rgba(40,28,8,.55); }
+.page-hard, .page-hard .pp-face.cover{ background:linear-gradient(160deg,#1a2c55,#101f3f); }
+.cover-names{ font-family:var(--serif); font-size:19px; color:#f0d78f; margin-top:6px; }
+
+.pagenav{ display:flex; align-items:center; gap:8px; margin-left:auto; }
+.navbtn{ -webkit-appearance:none; appearance:none; border:1px solid var(--line); background:var(--panel); color:var(--ink);
+  width:34px; height:34px; border-radius:9px; cursor:pointer; font-size:17px; line-height:1; display:grid; place-items:center;
+  box-shadow:var(--shadow); transition:transform .1s; }
+.navbtn:hover{ transform:translateY(-1px); }
+.pagenav .pageind{ margin:0; min-width:52px; text-align:center; }
+
+/* world-page stats strip (over the globe) */
+.gp-stats{ position:absolute; top:0; left:0; right:0; z-index:2; display:flex; justify-content:center; gap:18px; padding:12px 10px 16px;
+  background:linear-gradient(180deg, rgba(7,13,32,.8), rgba(7,13,32,0)); pointer-events:none; }
+.gp-stats div{ text-align:center; }
+.gp-stats b{ display:block; font-family:var(--serif); font-size:17px; color:#fff; line-height:1; font-variant-numeric:tabular-nums; }
+.gp-stats span{ font-family:var(--mono); font-size:7.5px; letter-spacing:.1em; text-transform:uppercase; color:rgba(210,220,255,.65); }
