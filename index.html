@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jasmine & Adrian's Dining Passport — NYC Restaurant Week 2026</title>
+  <meta name="description" content="A couple's NYC Restaurant Week planner: a live 3D globe, filter by cuisine & borough, sort by real ratings, match your picks, and collect a stamp for every country.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🛂%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+
+  <!-- ================= HERO / GLOBE ================= -->
+  <header class="hero">
+    <canvas id="globe"></canvas>
+    <div class="hero-veil"></div>
+    <div class="wrap" style="position:relative;z-index:4;display:flex;flex-direction:column;flex:1">
+      <div class="hero-top">
+        <div class="mark"><span class="seal">🌍</span> The Dining Passport</div>
+        <div class="top-actions">
+          <button class="ghost" id="themeBtn">☾ Night</button>
+          <button class="ghost" id="shareBtn">💌 Copy link to send</button>
+        </div>
+      </div>
+
+      <div class="hero-copy">
+        <p class="eyebrow">NYC Restaurant Week · 20 Jul – 16 Aug 2026</p>
+        <h1 class="title">The Dining<br><em>Passport</em></h1>
+        <div class="bearers">
+          <span class="bearer j"><i>J</i> Jasmine</span>
+          <span class="bearer a"><i>A</i> Adrian</span>
+        </div>
+        <p class="hero-sub">Two travelers, four boroughs, one <b>$30 / $45 / $60</b> prix-fixe adventure. Spin the globe, heart the places you each love — when you <b>both</b> pick one it's a <b>Match</b> — and stamp every country you dine your way through.</p>
+      </div>
+
+      <div class="globe-hint">Drag to spin · tap a glowing pin</div>
+      <div class="scrollcue">Scroll<span></span></div>
+    </div>
+  </header>
+
+  <!-- ================= STAT RAIL ================= -->
+  <div class="rail"><div class="wrap"><div class="rail-inner" id="statRail"></div></div></div>
+
+  <!-- ================= TABS ================= -->
+  <nav class="tabs"><div class="wrap tabs-inner">
+    <button class="tab" role="tab" aria-selected="true" data-view="browse">Browse <span class="pill" id="pillBrowse">0</span></button>
+    <button class="tab" role="tab" aria-selected="false" data-view="passport">Passport <span class="pill" id="pillPass">0</span></button>
+    <button class="tab" role="tab" aria-selected="false" data-view="trip">Our Trip <span class="pill" id="pillTrip">0</span></button>
+    <span class="sync-badge" id="syncBadge"><span class="dot"></span>Share-link mode</span>
+  </div></nav>
+
+  <main class="wrap">
+    <!-- BROWSE -->
+    <section class="view" id="view-browse">
+      <div class="controls">
+        <div class="search">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <input id="q" type="search" placeholder="Search restaurants, dishes, neighborhoods…" aria-label="Search">
+        </div>
+        <select id="fCuisine" aria-label="Filter by cuisine"></select>
+        <select id="fBorough" aria-label="Filter by borough"></select>
+        <select id="fPrice" aria-label="Filter by price"></select>
+        <select id="fWho" aria-label="Filter by who">
+          <option value="">Everyone</option>
+          <option value="match">★ Our matches</option>
+          <option value="j">Jasmine's ♥</option>
+          <option value="a">Adrian's ♥</option>
+          <option value="unpicked">Not picked yet</option>
+        </select>
+        <select id="sort" aria-label="Sort">
+          <option value="rating">Sort · Top rated</option>
+          <option value="reviews">Sort · Most reviewed</option>
+          <option value="name">Sort · A–Z</option>
+          <option value="cuisine">Sort · Cuisine</option>
+        </select>
+        <span class="count" id="count"></span>
+      </div>
+      <div class="grid" id="grid"></div>
+    </section>
+
+    <!-- PASSPORT -->
+    <section class="view" id="view-passport" hidden>
+      <div class="prog">
+        <div class="prog-txt">
+          <h2>Around the world in one Restaurant Week</h2>
+          <p>Tap a country — here or on the globe — to see its top-rated table, then stamp it once you've dined there together.</p>
+        </div>
+        <div class="prog-bar">
+          <div class="bar"><i id="progFill" style="width:0%"></i></div>
+          <div class="prog-num"><span id="progLabel">0 of 0 countries</span><span id="progPct">0%</span></div>
+        </div>
+      </div>
+      <div id="stampRegions"></div>
+    </section>
+
+    <!-- OUR TRIP -->
+    <section class="view" id="view-trip" hidden>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+        <button class="flowcta" data-jump="browse">＋ Add more from Browse</button>
+        <button class="flowcta primary" id="jumpMatches">♥ See our matches</button>
+        <button class="flowcta" id="surpriseBtn">✦ Surprise us tonight</button>
+      </div>
+      <div id="tripBody"></div>
+    </section>
+  </main>
+
+  <footer class="wrap">
+    <p class="fnote">Jasmine &amp; Adrian's Dining Passport · NYC Restaurant Week Summer 2026 (Jul 20–Aug 16) · Seeded with 71 hand-verified participating restaurants across Manhattan, Brooklyn, Queens &amp; Staten Island, compiled from NYC Tourism &amp; editorial guides. Ratings are point-in-time Google/Yelp figures and drift daily; a blank means we couldn't verify a number rather than guess. The Bronx's two rumored spots couldn't be confirmed and were left out. Drop a <b>restaurants.json</b> beside this file to grow toward all ~600. Always re-check the RW menu &amp; book via <a href="https://www.nyctourism.com/restaurant-week/" target="_blank" rel="noopener">nyctourism.com/rw</a>.</p>
+  </footer>
+
+  <div id="detail" hidden></div>
+  <div id="toast"></div>
+
+  <script src="config.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
