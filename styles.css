@@ -234,3 +234,101 @@ footer a{color:var(--cobalt)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 @media (max-width:560px){.count{width:100%;margin:2px 0 0}}
 .nojs-note{display:none}
+
+/* ============================================================================
+   PASSPORT BOOKLET — 3D page-turn + inked visa stamps
+   ============================================================================ */
+#bookMount{ --pp-paper:#efe6cf; --pp-paper-2:#e7dcbf; --pp-ink:#4a3d27; --pp-ink-soft:#8a7a55;
+  --pp-ghost:#b8a67e; --pp-navy:#16274d; --pp-gold:#d9b25a;
+  display:flex; justify-content:center; padding:8px 0 10px; perspective:2400px; }
+.book{ position:relative; width:min(720px, 94vw); aspect-ratio:1.46/1; transform:rotateX(6deg); transform-style:preserve-3d; }
+.book-shadow{ position:absolute; left:6%; right:6%; bottom:-3%; height:9%;
+  background:radial-gradient(ellipse at center, rgba(0,0,0,.4), transparent 72%); filter:blur(7px); z-index:0; }
+.book-base{ position:absolute; inset:0; z-index:0; }   /* reserved */
+.book::before{ /* the two static cream pages behind the turning leaves */
+  content:""; position:absolute; inset:0; border-radius:8px 12px 12px 8px;
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.16), transparent 6%, transparent 94%, rgba(0,0,0,.06)),
+    linear-gradient(90deg, var(--pp-paper), var(--pp-paper) 49.6%, rgba(0,0,0,.22) 49.9%, rgba(0,0,0,.22) 50.1%, var(--pp-paper) 50.4%, var(--pp-paper));
+  box-shadow:var(--shadow-lg); }
+.book-stack{ position:absolute; left:50%; top:0; width:50%; height:100%; transform-style:preserve-3d; z-index:1; }
+.leaf{ position:absolute; inset:0; transform-origin:left center; transform-style:preserve-3d;
+  transition:transform .9s cubic-bezier(.3,.1,.2,1); }
+.leaf.flipped{ transform:rotateY(-180deg); }
+.leaf-face{ position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden; overflow:hidden;
+  background:var(--pp-paper); border-radius:2px 10px 10px 2px; }
+.leaf-face.back{ transform:rotateY(180deg); border-radius:10px 2px 2px 10px; }
+.leaf-face::after{ /* soft gutter shadow near the spine */
+  content:""; position:absolute; top:0; bottom:0; left:0; width:26%;
+  background:linear-gradient(90deg, rgba(60,45,20,.22), transparent); pointer-events:none; }
+.leaf-face.back::after{ left:auto; right:0; background:linear-gradient(270deg, rgba(60,45,20,.22), transparent); }
+
+.pp-face{ position:absolute; inset:0; padding:26px 24px; color:var(--pp-ink); font-family:var(--serif);
+  background-image:
+    repeating-radial-gradient(circle at 30% 18%, transparent 0 7px, rgba(150,120,70,.035) 7px 8px),
+    repeating-radial-gradient(circle at 78% 82%, transparent 0 9px, rgba(150,120,70,.03) 9px 10px);
+  display:flex; flex-direction:column; }
+.pp-face.blank{ background:var(--pp-paper); }
+
+/* cover */
+.pp-face.cover{ background:
+    radial-gradient(120% 100% at 50% 0%, #22386a 0, transparent 60%),
+    linear-gradient(160deg,#1a2c55,#101f3f); padding:0; }
+.cover-frame{ margin:16px; flex:1; border:1.5px solid rgba(217,178,90,.6); border-radius:6px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:var(--pp-gold);
+  text-align:center; box-shadow:inset 0 0 40px rgba(0,0,0,.4); }
+.cover-crest{ font-size:52px; filter:drop-shadow(0 2px 4px rgba(0,0,0,.5)); }
+.cover-top{ font-family:var(--mono); font-size:11px; letter-spacing:.24em; text-transform:uppercase; opacity:.85 }
+.cover-title{ font-size:clamp(26px,5vw,40px); font-weight:600; letter-spacing:.06em; color:#f0d78f }
+.cover-sub{ font-style:italic; font-size:19px; opacity:.95 }
+.cover-rule{ width:44%; height:1px; background:rgba(217,178,90,.5); margin:6px 0 }
+.cover-foot{ font-family:var(--mono); font-size:9.5px; letter-spacing:.22em; text-transform:uppercase; opacity:.8 }
+
+/* identity page */
+.id-page{ gap:14px }
+.id-head{ font-family:var(--mono); font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--pp-ink-soft); border-bottom:1px solid rgba(120,95,50,.25); padding-bottom:8px }
+.id-grid{ display:flex; gap:16px }
+.id-photo{ width:76px; height:96px; flex:none; border:1px solid rgba(120,95,50,.4); border-radius:4px; display:grid; place-items:center; font-size:44px; background:rgba(255,255,255,.25) }
+.id-fields{ flex:1; display:flex; flex-direction:column; gap:7px; justify-content:center }
+.id-fields div{ display:flex; flex-direction:column; line-height:1.15 }
+.id-fields span{ font-family:var(--mono); font-size:8px; letter-spacing:.12em; text-transform:uppercase; color:var(--pp-ink-soft) }
+.id-fields b{ font-size:15px; font-weight:600 }
+.id-mrz{ margin-top:auto; font-family:var(--mono); font-size:10px; letter-spacing:.06em; color:#5a4a2c; word-break:break-all;
+  background:rgba(255,255,255,.35); border-top:1px solid rgba(120,95,50,.25); padding:8px 6px; line-height:1.5 }
+.id-note{ font-style:italic; font-size:12.5px; color:var(--pp-ink-soft); text-align:center; margin-top:4px }
+
+/* stamp page */
+.stamp-page{ padding:20px 18px }
+.page-wm{ position:absolute; inset:0; display:grid; place-items:center; font-size:120px; font-weight:700; color:rgba(120,95,50,.05); pointer-events:none; font-family:var(--serif) }
+.stamp-grid{ position:relative; flex:1; display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(2,1fr); gap:2px; place-items:center }
+.page-no{ position:absolute; bottom:8px; right:14px; font-family:var(--mono); font-size:9px; color:var(--pp-ink-soft) }
+.stamp-cell{ -webkit-appearance:none; appearance:none; border:none; outline:none; background:transparent; box-shadow:none; border-radius:0;
+  cursor:pointer; width:100%; height:100%; display:grid; place-items:center; padding:4px; transition:transform .12s; color:inherit; font:inherit }
+.stamp-cell.empty:hover{ transform:scale(1.06) }
+.stamp-cell.inked:hover{ transform:rotate(0deg) scale(1.04) }
+.stamp-svg{ width:min(100%,128px); aspect-ratio:1; height:auto; transform:rotate(var(--rot,0deg)); }
+.st-mono{ font-family:var(--mono); font-weight:600 }
+.st-arc{ font-family:var(--mono); font-weight:700; letter-spacing:1px }
+.st-flag{ font-family:var(--sans) }
+@keyframes slam{ 0%{ transform:scale(1.7) rotate(calc(var(--rot,0deg) - 14deg)); opacity:0 }
+  55%{ transform:scale(.9) rotate(var(--rot,0deg)); opacity:1 } 75%{ transform:scale(1.05) } 100%{ transform:scale(1) rotate(var(--rot,0deg)) } }
+.stamp-cell.slam .stamp-svg{ animation:slam .5s cubic-bezier(.2,1.3,.4,1) }
+
+/* end page */
+.end-page{ align-items:center; justify-content:center }
+.end-inner{ margin:auto; text-align:center; color:var(--pp-ink-soft) }
+.end-crest{ font-size:34px; color:var(--pp-gold) }
+.end-title{ font-size:26px; font-style:italic; color:var(--pp-ink) }
+.end-sub{ font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; margin-top:6px }
+
+/* turn controls */
+.turn{ position:absolute; top:50%; transform:translateY(-50%); z-index:6; width:44px; height:44px; border-radius:50%;
+  border:1px solid var(--line); background:var(--panel); color:var(--ink); font-size:22px; cursor:pointer; box-shadow:var(--shadow);
+  display:grid; place-items:center; transition:transform .1s, opacity .2s }
+.turn:hover{ transform:translateY(-50%) scale(1.08) }
+.turn.prev{ left:-12px } .turn.next{ right:-12px }
+.book.at-start .turn.prev{ opacity:.28; pointer-events:none }
+.book.at-end .turn.next{ opacity:.28; pointer-events:none }
+.book-hint{ position:absolute; left:0; right:0; bottom:-30px; text-align:center; font-family:var(--mono);
+  font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft) }
+@media (max-width:520px){ .book{ transform:none } .pp-face{ padding:16px 14px } .id-grid{ gap:10px } .book-hint{ bottom:-26px } }

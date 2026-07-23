@@ -3,6 +3,7 @@
 // ============================================================================
 import { loadData, HOME, REGION_ORDER } from "./data.js";
 import { createGlobe } from "./globe.js";
+import { buildBook } from "./passport-book.js";
 import { Sync, mergeState } from "./sync.js";
 
 const $  = s => document.querySelector(s);
@@ -13,6 +14,7 @@ let DATA = [];
 let picks = {};                 // name -> {j, a}
 let visited = new Set();        // country names
 let globe = null;
+let book = null, bookPage = 0;  // passport booklet
 
 /* ---------- persistence + URL state ------------------------------------- */
 function enc(str){ try{ return btoa(unescape(encodeURIComponent(str))); }catch(e){ return ""; } }
@@ -116,25 +118,29 @@ function renderBrowse(){
 }
 
 /* ---------- PASSPORT ----------------------------------------------------- */
-function renderPassport(){
+function updateProgress(){
   const cs = countries();
   const total = cs.length, done = cs.filter(c=>visited.has(c.country)).length;
   const pct = total ? Math.round(done/total*100) : 0;
   $("#progFill").style.width = pct+"%";
   $("#progLabel").textContent = `${done} of ${total} countries stamped`;
   $("#progPct").textContent = pct+"%";
-  const byR = {}; cs.forEach(c => (byR[c.region]=byR[c.region]||[]).push(c));
-  const regions = Object.keys(byR).sort((a,b)=>{ const ia=REGION_ORDER.indexOf(a),ib=REGION_ORDER.indexOf(b); return (ia<0?9:ia)-(ib<0?9:ib); });
-  $("#stampRegions").innerHTML = regions.map(r=>{
-    const stamps = byR[r].sort((a,b)=>a.country.localeCompare(b.country)).map(c=>{
-      const best = c.items.slice().sort((x,y)=>(y.rating||0)-(x.rating||0))[0];
-      const on = visited.has(c.country);
-      return `<button class="stamp ${on?'visited':''}" data-country="${encodeURIComponent(c.country)}">
-        <span class="mk">Visited</span><div class="flag">${c.flag}</div><div class="cty">${c.country}</div>
-        <div class="cz">${c.items.length} spot${c.items.length>1?'s':''} · top ${best&&best.rating?('★'+best.rating.toFixed(1)):'—'}</div></button>`;
-    }).join("");
-    return `<div class="region-h">${r}</div><div class="stamps">${stamps}</div>`;
-  }).join("");
+}
+function renderPassport(){
+  updateProgress();
+  if (book) book.destroy();
+  book = buildBook($("#bookMount"), {
+    countries: countries(),
+    isVisited: c => visited.has(c.country),
+    onStamp: country => {                          // page taps only add a stamp
+      if (visited.has(country)) return false;
+      visited.add(country); persist(); renderStats(); updateProgress();
+      return true;
+    },
+    onOpen: country => openCountry(country),
+    startPage: bookPage,
+    onPage: p => { bookPage = p; }
+  });
 }
 
 /* ---------- OUR TRIP ----------------------------------------------------- */
@@ -309,6 +315,10 @@ async function boot(){
     const cs = countries().map(c => ({ country:c.country, lat:c.lat, lng:c.lng, count:c.items.length }));
     globe = createGlobe($("#globe"), { home:HOME, countries:cs, reduced, onPick:c => { switchView("browse"); openCountry(c); } });
   }catch(e){ console.warn("Globe failed to start:", e); $(".globe-hint").textContent = ""; }
+
+  // deep-link a tab, e.g. ?tab=passport
+  const tabParam = new URLSearchParams(location.search).get("tab");
+  if (tabParam && ["browse","passport","trip"].includes(tabParam)) switchView(tabParam);
 
   // live sync (optional)
   await Sync.init({ onRemote, onStatus });
